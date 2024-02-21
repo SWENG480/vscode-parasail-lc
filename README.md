@@ -7,7 +7,7 @@ TODO
 
 ## Dependencies
 - [Parasail Language Server](https://github.com/parasail-lang/parasail-ls) as git submodule
-- [Parasail TexMate Grammar](https://github.com/parasail-lang/parasail-tm) as git submodule
+- [Parasail TextMate Grammar](https://github.com/parasail-lang/parasail-tm) as git submodule
 
 ## Structure
 
