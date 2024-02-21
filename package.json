@@ -64,7 +64,8 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
+		"vscode:prepublish": "npm run build_server && npm run compile",
+		"build_server": "cd parasail-ls && npm run build",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"lint": "eslint ./client/src ./parasail-ls/src --ext .ts,.tsx",
