@@ -1,9 +1,13 @@
-# VSCode ParaSail Language Client
+# VSCode Parasail Language Client
 
 
 ## Functionality
 
 TODO
+
+## Dependencies
+- Parasail Language Server ([parasail-ls](https://github.com/parasail-lang/parasail-ls)) as git submodule
+- Parasail TexMate Grammar ([parasail-tm](https://github.com/parasail-lang/parasail-tm)) as git submodule
 
 ## Structure
 
@@ -21,12 +25,12 @@ TODO
     └── parasail.tmLanguage.json
 ```
 
-## Developping the ParaSail VSCode Client
+## Developing the Parasail VSCode Client
 
 - Clone using `git clone --recurse-submodules https://github.com/parasail-lang/vscode-parasail-lc`
 - `cd vscode-parasail-lc`
 - Run `npm run vscode:prepublish`
-- Select `Launch Client` from the drop down (if it is not already).
+- Select `Launch Client` from the drop-down (if it is not already).
 - Press ▷ to run the launch config (F5).
-- In the [Extension Development Host](https://code.visualstudio.com/api/get-started/your-first-extension#:~:text=Then%2C%20inside%20the%20editor%2C%20press%20F5.%20This%20will%20compile%20and%20run%20the%20extension%20in%20a%20new%20Extension%20Development%20Host%20window.) instance of VSCode, open a `*psl` document.
+- In the [Extension Development Host](https://code.visualstudio.com/api/get-started/your-first-extension#:~:text=Then%2C%20inside%20the%20editor%2C%20press%20F5.%20This%20will%20compile%20and%20run%20the%20extension%20in%20a%20new%20Extension%20Development%20Host%20window.) instance of VSCode, open a `*.psl` or `*.psi` document.
   - Enter text content such as `AAA aaa BBB`. The extension will emit diagnostics for all words in all-uppercase.
