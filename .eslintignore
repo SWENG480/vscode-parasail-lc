@@ -1,0 +1,5 @@
+node_modules/**
+client/node_modules/**
+client/out/**
+parasail-ls/node_modules/**
+parasail-ls/out/**
