@@ -14,8 +14,11 @@
 		"node_modules",
 		".vscode-test"
 	],
+
+	"files": [],
 	"references": [
 		{ "path": "./client" },
 		{ "path": "./parasail-ls" }
 	]
+
 }
