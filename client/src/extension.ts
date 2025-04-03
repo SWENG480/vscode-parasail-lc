@@ -1,145 +1,108 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  TransportKind
+} from 'vscode-languageclient/node';
 import { LibraryView, Library } from './libraryView';
 
-
-import {
-	LanguageClient,
-	LanguageClientOptions,
-	ServerOptions,
-	TransportKind
-} from 'vscode-languageclient/node';
-import { text } from 'stream/consumers';
-
-let client: LanguageClient; 
+let client: LanguageClient;
 let libraryView: LibraryView;
 
-// Path to the libraries.json file
 const librariesFilePath = path.join(__dirname, '..', 'libraries.json');
 
+// --- Configuration for DSL script and standard library ---
+// Adjust the extension ID to your own.
+const extensionId = 'your.extension.id'; 
+const dslScript = vscode.extensions.getExtension(extensionId)?.extensionPath
+  ? path.join(vscode.extensions.getExtension(extensionId)!.extensionPath, 'parasail-ls', 'scripts', 'extension_lookup.psl')
+  : undefined;
+
+// Standard library file (e.g., aaa.psi) inside your parasail_macos_build/lib folder.
+const standardLibraryPath = "/Users/aisenlopezramos/parasail_macos_build/lib/aaa.psi";
+
+// Fallback: if PARASAIL_CMD isn’t set in the environment, use this absolute path.
+const fallbackParasailExecutable = "/Users/aisenlopezramos/parasail_macos_build/build/bin/parasail_main";
+
 export function activate(context: vscode.ExtensionContext) {
-	
-	// The server is implemented in node
-	const serverModule = context.asAbsolutePath(
-		path.join('parasail-ls', 'out', 'server.js')
+  const serverModule = context.asAbsolutePath(path.join('parasail-ls', 'out', 'server.js'));
 
-	);
+  const runEnv = { 
+    ...process.env, 
+    PARASAIL_CMD: process.env.PARASAIL_CMD || fallbackParasailExecutable 
+  };
 
-	// If the extension is launched in debug mode then the debug server options are used
-	// Otherwise the run options are used
-	const serverOptions: ServerOptions = {
-		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: {
-			module: serverModule,
-			transport: TransportKind.ipc,
-		}
-	};
+  const serverOptions: ServerOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc, options: { env: runEnv } },
+    debug: { module: serverModule, transport: TransportKind.ipc, options: { env: runEnv } }
+  };
 
-	// Options to control the language client
-	const clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
-		documentSelector: [{ scheme: 'file', language: 'parasail' }],
-		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: vscode.workspace.createFileSystemWatcher('**/.clientrc')
-		}
-	};
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [{ scheme: 'file', language: 'parasail' }],
+    initializationOptions: {
+      dslScript: dslScript,               // Absolute path to extension_lookup.psl
+      standardLibraryPath: standardLibraryPath  // Absolute path to aaa.psi
+    },
+    synchronize: {
+      fileEvents: vscode.workspace.createFileSystemWatcher('**/.clientrc')
+    }
+  };
 
-	// Create the language client and start the client.
-	client = new LanguageClient(
-		'parasailServer',
-		'ParaSail Server',
-		serverOptions,
-		clientOptions
-	);
+  client = new LanguageClient('parasailServer', 'ParaSail Server', serverOptions, clientOptions);
+  client.start();
 
-	// Start the client. This will also launch the server
-	client.start();
+  // Register the library view.
+  libraryView = new LibraryView(librariesFilePath);
+  vscode.window.registerTreeDataProvider('libraryView', libraryView);
 
-	// note: these features may need to be adjusted based on the lsp implementation
-	// a lot of the work is done on the lsp's end
-
-	// PLUGIN LIBRARY FEATURE : uc-plugin-files
-	// Register the library view
-	libraryView = new LibraryView(librariesFilePath);
-	vscode.window.registerTreeDataProvider('libraryView', libraryView);
-
-    // Register command to add a library
-    const addLibraryCommand = vscode.commands.registerCommand('parasail.addLibrary', async () => {
-        const libraryPath = await vscode.window.showInputBox({
-            prompt: 'Enter the library path',
-            placeHolder: '/path/to/library',
-        });
-
-        if (libraryPath) {
-			// check if path exists
-			if (fs.existsSync(libraryPath)) {
-				const libraryName = path.basename(libraryPath);
-                libraryView.addLibraryPath({ name: libraryName, path: libraryPath });
-			
-				// send notification to lsp about added library
-				client.sendNotification('parasail/addLibrary', {name: libraryName, path: libraryPath});
-			
-				// show success message
-				vscode.window.showInformationMessage(`Library '${libraryName}' added.`);
-			} else{
-				// show error message if path does not exist
-				vscode.window.showErrorMessage(`The path ${libraryPath} does not exist.`);
-			}
-		}
+  const addLibraryCommand = vscode.commands.registerCommand('parasail.addLibrary', async () => {
+    const libraryPath = await vscode.window.showInputBox({
+      prompt: 'Enter the library path',
+      placeHolder: '/path/to/library'
     });
+    if (libraryPath) {
+      if (fs.existsSync(libraryPath)) {
+        const libraryName = path.basename(libraryPath);
+        libraryView.addLibraryPath({ name: libraryName, path: libraryPath });
+        client.sendNotification('parasail/addLibrary', { name: libraryName, path: libraryPath });
+        vscode.window.showInformationMessage(`Library '${libraryName}' added.`);
+      } else {
+        vscode.window.showErrorMessage(`The path ${libraryPath} does not exist.`);
+      }
+    }
+  });
 
-    // Register command to remove a library
-    const removeLibraryCommand = vscode.commands.registerCommand('parasail.removeLibrary', async (library: Library) => {
-		if (library) {
-			// if library selected from the tree view
-			libraryView.removeLibraryPath(library);
-		
-			// send notification to lsp about removed library
-			client.sendNotification('parasail/removeLibrary', {name: library.name, path: library.path});
-		
-			// show success message
-			vscode.window.showInformationMessage(`Library '${library.name}' removed.`);
-		} else {
-			// if no library selected, ask the user to enter a path
-			const libraryPath = await vscode.window.showInputBox({
-				prompt: 'Enter the path of the library to remove',
-				placeHolder: '/path/to/library',
-			});
-			if (libraryPath) {
-				const matchedLibrary = (await libraryView
-					.getChildren())
-					.find(lib => lib.path === libraryPath);
-				if (matchedLibrary) {
-					// send notification to lsp about removed library
-					client.sendNotification('parasail/removeLibrary', {name: matchedLibrary.name, path: matchedLibrary.path});
+  const removeLibraryCommand = vscode.commands.registerCommand('parasail.removeLibrary', async (library: Library) => {
+    if (library) {
+      libraryView.removeLibraryPath(library);
+      client.sendNotification('parasail/removeLibrary', { name: library.name, path: library.path });
+      vscode.window.showInformationMessage(`Library '${library.name}' removed.`);
+    } else {
+      const libraryPath = await vscode.window.showInputBox({
+        prompt: 'Enter the path of the library to remove',
+        placeHolder: '/path/to/library'
+      });
+      if (libraryPath) {
+        const children = await libraryView.getChildren();
+        const matchedLibrary = children.find((lib: Library) => lib.path === libraryPath);
+        if (matchedLibrary) {
+          client.sendNotification('parasail/removeLibrary', { name: matchedLibrary.name, path: matchedLibrary.path });
+          libraryView.removeLibraryPath(matchedLibrary);
+          vscode.window.showInformationMessage(`Library '${matchedLibrary.name}' removed.`);
+        } else {
+          vscode.window.showErrorMessage(`No library found with the path: ${libraryPath}`);
+        }
+      }
+    }
+  });
 
-					// remove library from the tree view
-					libraryView.removeLibraryPath(matchedLibrary);
-					vscode.window.showInformationMessage(`Library '${matchedLibrary.name}' removed.`);
-				} else {
-					vscode.window.showErrorMessage(`No library found with the path: ${libraryPath}`);
-				}
-		}
-		}
-	});
-	// on LSP side, we will create new NotificationType for addLibrary and 
-	// removeLibrary and handle them in the server with connection.onNotification
-	//
-
-	// add the commands to the context
-	context.subscriptions.push(addLibraryCommand, removeLibraryCommand);
-	
+  context.subscriptions.push(addLibraryCommand, removeLibraryCommand);
 }
+
 export function deactivate(): Thenable<void> | undefined {
-	if (!client) {
-		return undefined;
-	}
-	return client.stop();
+  if (!client) return undefined;
+  return client.stop();
 }
