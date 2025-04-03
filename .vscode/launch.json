@@ -1,30 +1,22 @@
-// A launch configuration that compiles the extension and then opens it inside a new window
 {
 	"version": "0.2.0",
 	"configurations": [
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Client",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
+	  {
+		"type": "extensionHost",
+		"request": "launch",
+		"name": "Launch Client",
+		"runtimeExecutable": "${execPath}",
+		"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+		"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
+		"env": {
+		  "PARASAIL_CMD": "/Users/aisenlopezramos/parasail_macos_build/build/bin/parasail_main",
+		  "PATH": "/Users/aisenlopezramos/parasail_macos_build/build/bin:${env:PATH}"
 		},
-		{
-			"name": "Language Server E2E Test",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"--extensionTestsPath=${workspaceRoot}/client/out/test/index",
-				"${workspaceRoot}/client/testFixture"
-			],
-			"outFiles": ["${workspaceRoot}/client/out/test/**/*.js"]
+		"preLaunchTask": {
+		  "type": "npm",
+		  "script": "watch"
 		}
+	  }
 	]
-}
+  }
+  
